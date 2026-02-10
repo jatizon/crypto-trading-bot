@@ -1,0 +1,7 @@
+.env
+.venv/
+*.csv
+*.ipynb
+__pycache__/
+.cursorignore
+.vscode/
