@@ -6,16 +6,9 @@ import time
 from tqdm import tqdm
 import pandas as pd
 
-load_dotenv()
 
 
-exchange = ccxt.coinbase({
-    "apiKey": os.getenv("COINBASE_API_KEY"),
-    "secret": os.getenv("COINBASE_API_SECRET"),
-    "enableRateLimit": True,
-})
-
-def get_historical_data(symbol, timeframe, limit=1000, use_existing=False):
+def get_historical_data(exchange, symbol, timeframe, limit=1000, use_existing=False):
     if use_existing:
         return pd.read_csv("data.csv")
 
