@@ -2,12 +2,21 @@ import ccxt
 import os
 from dotenv import load_dotenv
 from get_historical_data import get_historical_data
-import market_data
-import wallet
-import day_trading_bot
+from market_data *
+from wallet import Wallet
+from day_trading_bot import DayTradingBot
+from event_dispatcher import EventDispatcher
 
 
 load_dotenv()
+
+bot_config = {
+    "symbol": "BTC/USDC",
+    "type": "market",
+    "side": "buy",
+    "amount": 1,
+    "price": None,
+}
 
 exchange = ccxt.coinbase({
     "apiKey": os.getenv("COINBASE_API_KEY"),
@@ -15,13 +24,9 @@ exchange = ccxt.coinbase({
     "enableRateLimit": True,
 })
 
+exchange.options['createMarketBuyOrderRequiresPrice'] = False
 
-get_historical_data(exchange, "BTC/USDC", "1h", use_existing=True)
+dispatcher = event_dispatcher.EventDispatcher()
 
-symbol = "BTC/USDC"
-
-market_data.calculate_total_fee(exchange, "BTC/USDC", 1, "market")
-
-# Instantiate and run the bot (commented out to avoid infinite loop)
-bot = day_trading_bot.DayTradingBot(exchange, market_data, wallet)
-# bot.run()
+bot = DayTradingBot(exchange, dispatcher, bot_config)
+bot.run()

@@ -1,24 +1,19 @@
 
-def get_total_balance(exchange, currency):
-    balance = exchange.fetch_balance()
-    return balance[currency].get("total")
 
-def get_free_balance(exchange, currency):
-    balance = exchange.fetch_balance()
-    return balance[currency].get("free")
+class Wallet:
+    def __init__(self, exchange):
+        self.exchange = exchange
 
-def buy_coin(exchange, symbol, type, usdc_amount, price=None):
-    raw_order = exchange.create_order(symbol, type, side="buy", amount=usdc_amount, price=price)
-    finished_order = exchange.fetch_order(raw_order["id"])
-    return finished_order
+    def get_total_balance(self, currency):
+        balance = self.exchange.fetch_balance()
+        return balance[currency].get("total")
 
-def sell_coin(exchange, symbol, type, btc_amount, price=None):
-    raw_order = exchange.create_order(symbol, type, side="sell", amount=btc_amount, price=price)
-    finished_order = exchange.fetch_order(raw_order["id"])
-    return finished_order
+    def get_free_balance(self, currency):
+        balance = self.exchange.fetch_balance()
+        return balance[currency].get("free")
 
-def get_order(exchange, order_id):
-    return exchange.fetch_order(order_id)
+    def get_order(self, order_id):
+        return self.exchange.fetch_order(order_id)
 
-def get_orders(exchange, symbol=None):
-    return exchange.fetch_orders(symbol=symbol)
+    def get_orders(self, symbol=None):
+        return self.exchange.fetch_orders(symbol=symbol)
