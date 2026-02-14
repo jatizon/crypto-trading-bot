@@ -1,15 +1,22 @@
 
-
+import inspect
 
 class EventDispatcher:
     def __init__(self):
         self.event_listeners = {}
 
-    @classmethod
-    def create_listener_for_id(cls, expected_id, raw_listener, **kwargs):
-        def listener(id=None, **payload):
-            if id == expected_id:
-                return raw_listener(**kwargs, **payload)
+    @staticmethod
+    def create_listener_for_id(expected_id, raw_listener, **kwargs):
+        accepts_id = 'id' in inspect.signature(raw_listener).parameters
+
+        def listener(id, **payload):
+            if id != expected_id:
+                return False
+            if accepts_id:
+                raw_listener(id=id, **kwargs, **payload)
+            else:
+                raw_listener(**kwargs, **payload)
+            return True
         return listener
 
     def add_event_listener(self, event, listener, keep_listener, **kwargs):
@@ -25,8 +32,8 @@ class EventDispatcher:
 
         for elements in listeners.copy():
             listener, keep_listener, listener_kwargs = elements
-            listener(**listener_kwargs, **payload)
-            if not keep_listener:
+            ran = listener(**listener_kwargs, **payload)
+            if not keep_listener and ran:
                 listeners.remove(elements)
 
         if not listeners:

@@ -37,3 +37,7 @@ def calculate_total_fee(exchange, symbol, usdc_amount, type):
     print(f'Total fee: {total_fee}')
 
     return total_fee
+
+# PF = PI*LUCRO/TAXA TOTAL
+def selling_price_for_profit(buy_price, profit):
+    pass

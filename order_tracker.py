@@ -1,5 +1,6 @@
+from datetime import datetime
 
-
+from order import Order
 
 
 class OrderTracker:
@@ -7,48 +8,55 @@ class OrderTracker:
         self.exchange = exchange
         self.orders = {}
 
-    def get_status(self, order_id):
-        return self.orders[order_id]["status"]
-
-    def create_order(self, symbol, order_type, side, amount, price=None):
+    def place_order(self, symbol, order_type, side, amount, price=None):
         order = self.exchange.create_order(symbol, order_type, side, amount, price)
+        return order
+
+    def track_order(self, order):
         order_id = order["id"]
-        self.orders[order_id] = order
+        self.orders[order_id] = Order.from_ccxt_order(order)
         return order_id
+
+    def update_order(self, order_id):
+        old_order = self.get_order(order_id)
+        symbol = old_order.symbol
+        raw_order = self.exchange.fetch_order(order_id, symbol)
+        order = old_order.update_from_ccxt(raw_order)
+        self.orders[order_id] = order
+        return order
 
     def get_order(self, order_id):
         return self.orders[order_id]
 
-    def get_orders(self):
+    def get_all_orders(self):
         return self.orders
 
     def remove_order(self, order_id):
         del self.orders[order_id]
 
-    def create_event(self, prev_status, status, order_id):
-        if status == prev_status:
-            return None
-        if status == "closed":
-            return {"name": "order_closed", "order_id": order_id}
-        if status == "canceled":
-            return {"name": "order_canceled", "order_id": order_id}
-
-    def update_order(self, order_id):
-        self.orders[order_id] = self.exchange.fetch_order(order_id)
-        return self.orders[order_id]
+    def create_event_for_order(self, old_order, order):
+        if order.status != old_order.status:
+            if order.status == "closed":
+                return "order_filled"
+            if order.status == "canceled":
+                return "order_canceled"
+            if order.status == "expired":
+                return "order_expired"
+        return None
 
     def update_orders(self):
         event_order_ids = {}
-        for order_id in self.orders:
-            prev_status = self.get_status(order_id)
+        for order_id in list(self.orders):
+            old_order = self.get_order(order_id) 
             order = self.update_order(order_id)
-            status = order["status"]
 
-            event = self.create_event(prev_status, status, order_id)
-            if event:
-                if event["name"] not in event_order_ids:
-                    event_order_ids[event["name"]] = []
-                event_order_ids[event["name"]].append(order_id)
+            event = self.create_event_for_order(old_order, order)
+            if not event:
+                continue
+            if event not in event_order_ids:
+                event_order_ids[event] = []
+            event_order_ids[event].append(order_id)
+
         return event_order_ids
                 
 

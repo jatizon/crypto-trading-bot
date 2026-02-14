@@ -1,110 +1,82 @@
 from dataclasses import dataclass, field, fields
 from typing import Any, Dict, List, Optional, Union, get_args, get_origin
+import copy
+from utils import now_seconds
 
 
 @dataclass(slots=True)
 class Order:
-    # ---- core identifiers ----
     id: str
-    client_order_id: Optional[str]
     symbol: str
     side: str
     type: str
 
-    # ---- quantities & price ----
     amount: float
     filled: float
     remaining: float
     cost: Optional[float]
     average_price: Optional[float]
 
-    # ---- status & time ----
-    status: str
-    timestamp: int                 # order creation / exchange timestamp
-    datetime: str
-    last_trade_timestamp: Optional[int]      # timestamp of last execution
-    filled_timestamp: Optional[int]          # moment order became fully filled
+    creation_timestamp: int
+    last_trade_timestamp: Optional[int]
+    filled_timestamp: Optional[int]
+    expiration_timestamp: Optional[int]
 
-    # ---- raw / exchange specific ----
-    info: Dict[str, Any] = field(repr=False)
+    cctx_status: str
 
-    # ---- optional / future ----
-    fee: Optional[Any]
-    trades: List[Any]
+    @property
+    def status(self) -> str:
+        if self.cctx_status != 'closed' and now_seconds() > self.expiration_timestamp:
+            return "expired"
+        return self.cctx_status
 
-    # ---- custom user fields ----
-    metadata: Dict[str, Any] = field(default_factory=dict)
-
-    # ==========================
-    # Factory
-    # ==========================
     @classmethod
-    def from_ccxt_order(cls, order: Dict[str, Any]) -> "Order":
-        try:
-            last_trade_ts = int(order["lastTradeTimestamp"])
-            timestamp = int(order["timestamp"])
+    def from_ccxt_order(cls, order: Dict[str, Any], max_pending_time: int = 3600) -> "Order":
+        if order["status"] == "closed" and order["filled_timestamp"] is None:
+            filled_ts = int(order["lastTradeTimestamp"])
+        else:
+            filled_ts = None
 
-            filled_timestamp = last_trade_ts if order["status"] == "FILLED" else None
+        expiration_timestamp = int(order["timestamp"]) + max_pending_time
 
-            return cls(
-                # identifiers
-                id=str(order["id"]),
-                client_order_id=order.get("clientOrderId"),
-                symbol=str(order["symbol"]),
-                side=str(order["side"]),
-                type=str(order["type"]),
+        return cls(
+            # Fixed attributes
+            id=str(order["id"]),
+            symbol=str(order["symbol"]),
+            side=str(order["side"]),
+            type=str(order["type"]),
+            amount=float(order["amount"]),
+            creation_timestamp=int(order["timestamp"]),
+            expiration_timestamp=expiration_timestamp,
 
-                # quantities
-                amount=float(order["amount"]),
-                filled=float(order["filled"]),
-                remaining=float(order["remaining"]),
-                cost=float(order["cost"]) if order["cost"] is not None else None,
-                average_price=float(order["average"]) if order["average"] is not None else None,
+            # Dynamic attributes
+            cctx_status=str(order["status"]),
+            filled=float(order["filled"]) if order["filled"] is not None else None,
+            remaining=float(order["remaining"]) if order["remaining"] is not None else None,
+            cost=float(order["cost"]) if order["cost"] is not None else None,
+            average_price=float(order["average"]) if order["average"] is not None else None,
+            last_trade_timestamp=int(order["lastTradeTimestamp"]) if order["lastTradeTimestamp"] is not None else None,
+            filled_timestamp=filled_ts,
+        )
 
-                # time & status
-                status=str(order["status"]),
-                timestamp=timestamp,
-                datetime=str(order["datetime"]),
-                last_trade_timestamp=last_trade_ts,
-                filled_timestamp=filled_timestamp,
+    def update_from_ccxt(self, order: Dict[str, Any]) -> "Order":
+        updated = copy.copy(self)
 
-                # raw
-                info=dict(order["info"]),
+        if str(order["id"]) != self.id:
+            raise ValueError("Cannot update Order with different id")
 
-                # optional
-                fee=order.get("fee"),
-                trades=list(order.get("trades", [])),
-            )
+        if order["status"] == "closed" and self.filled_timestamp is None:
+            filled_ts = int(order["lastTradeTimestamp"])
+        else:
+            filled_ts = None
 
-        except KeyError as e:
-            raise KeyError(f"Missing required order field: {e}") from e
-        except (TypeError, ValueError) as e:
-            raise ValueError(f"Invalid order field type: {e}") from e
+        # Update dynamic attributes
+        updated.cctx_status = str(order["status"])
+        updated.filled = float(order["filled"]) if order["filled"] is not None else None
+        updated.remaining = float(order["remaining"]) if order["remaining"] is not None else None
+        updated.cost = float(order["cost"]) if order["cost"] is not None else None
+        updated.average_price = float(order["average"]) if order["average"] is not None else None
+        updated.last_trade_timestamp = int(order["lastTradeTimestamp"]) if order["lastTradeTimestamp"] is not None else None
+        updated.filled_timestamp = filled_ts
 
-    def _is_instance(value, expected_type) -> bool:
-        origin = get_origin(expected_type)
-
-        if origin is Union:
-            return any(_is_instance(value, t) for t in get_args(expected_type))
-
-        if expected_type is Any:
-            return True
-
-        return isinstance(value, expected_type)
-        
-    def __post_init__(self):
-        for f in fields(self):
-            value = getattr(self, f.name)
-            expected = f.type
-
-            if value is None:
-                # Allow None only if Optional
-                origin = get_origin(expected)
-                if origin is not Union or type(None) not in get_args(expected):
-                    raise TypeError(f"{f.name} is None but expected {expected}")
-                continue
-
-            if not _is_instance(value, expected):
-                raise TypeError(
-                    f"{f.name}={value!r} has type {type(value)}, expected {expected}"
-                )
+        return updated

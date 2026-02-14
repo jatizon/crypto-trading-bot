@@ -4,10 +4,10 @@ from dotenv import load_dotenv
 from get_historical_data import get_historical_data
 from market_data import *
 from wallet import Wallet
-from day_trading_bot import DayTradingBot
+from trading_bot import TradingBot
 from event_dispatcher import EventDispatcher
 from order_tracker import OrderTracker
-
+from context import BotContext
 
 load_dotenv()
 
@@ -30,5 +30,6 @@ exchange.options['createMarketBuyOrderRequiresPrice'] = False
 dispatcher = EventDispatcher()
 order_tracker = OrderTracker(exchange)
 
-bot = DayTradingBot(exchange, dispatcher, order_tracker, bot_config)
+context = BotContext(exchange, dispatcher, order_tracker, bot_config)
+bot = TradingBot(context)
 bot.run()
