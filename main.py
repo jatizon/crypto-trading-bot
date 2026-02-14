@@ -2,10 +2,11 @@ import ccxt
 import os
 from dotenv import load_dotenv
 from get_historical_data import get_historical_data
-from market_data *
+from market_data import *
 from wallet import Wallet
 from day_trading_bot import DayTradingBot
 from event_dispatcher import EventDispatcher
+from order_tracker import OrderTracker
 
 
 load_dotenv()
@@ -26,7 +27,8 @@ exchange = ccxt.coinbase({
 
 exchange.options['createMarketBuyOrderRequiresPrice'] = False
 
-dispatcher = event_dispatcher.EventDispatcher()
+dispatcher = EventDispatcher()
+order_tracker = OrderTracker(exchange)
 
-bot = DayTradingBot(exchange, dispatcher, bot_config)
+bot = DayTradingBot(exchange, dispatcher, order_tracker, bot_config)
 bot.run()

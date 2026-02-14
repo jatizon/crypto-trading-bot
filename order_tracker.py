@@ -17,7 +17,7 @@ class OrderTracker:
         return order_id
 
     def get_order(self, order_id):
-        return self.orders.get(order_id)
+        return self.orders[order_id]
 
     def get_orders(self):
         return self.orders
@@ -38,7 +38,7 @@ class OrderTracker:
         return self.orders[order_id]
 
     def update_orders(self):
-        events = {}
+        event_order_ids = {}
         for order_id in self.orders:
             prev_status = self.get_status(order_id)
             order = self.update_order(order_id)
@@ -46,8 +46,9 @@ class OrderTracker:
 
             event = self.create_event(prev_status, status, order_id)
             if event:
-                if event["name"] not in events:
-                    events[event["name"]] = []
-                events[event["name"]].append(event)
+                if event["name"] not in event_order_ids:
+                    event_order_ids[event["name"]] = []
+                event_order_ids[event["name"]].append(order_id)
+        return event_order_ids
                 
 
