@@ -1,14 +1,26 @@
-def on_buy_order_closed(id=None, context=None, **kwargs):
-    print(f"Buy order {id} closed! Creating sell order...")
-    
+from calculations import get_fee_pct, sell_price_for_profit
+
+
+def on_buy_order_closed(id=None, context=None, **kwargs):    
     buy_order = context.order_tracker.get_order(id)
+
     filled_amount = buy_order['filled']
-    average_price = buy_order['average']
+    cost = buy_order['cost']
     symbol = context.bot_config["symbol"]
+
+    sell_fee = get_fee_pct(context.exchange, symbol, "limit")
+
+    sell_price = sell_price_for_profit(
+        cost,
+        filled_amount,
+        context.bot_config["profit_percentage"],
+        sell_fee
+    )
     
-    if filled_amount > 0:
-        print(f"Placing limit sell order for {filled_amount} {symbol} at {average_price}")
-        sell_order_id = context.order_tracker.create_order(symbol, "limit", "sell", filled_amount, average_price)
-        print(f"Sell order created: {sell_order_id}")
-    else:
-        print("Order finished but no amount filled?")
+    sell_order_id = context.order_tracker.place_and_track_order(
+        symbol,
+        "limit",
+        "sell",
+        filled_amount,
+        sell_price
+    )

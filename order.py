@@ -32,8 +32,8 @@ class Order:
 
     @classmethod
     def from_ccxt_order(cls, order: Dict[str, Any], max_pending_time: int = 3600) -> "Order":
-        if order["status"] == "closed" and order["filled_timestamp"] is None:
-            filled_ts = int(order["lastTradeTimestamp"])
+        if order["status"] == "closed":
+            filled_ts = int(order["lastTradeTimestamp"]) if order["lastTradeTimestamp"] is not None else None
         else:
             filled_ts = None
 
@@ -66,7 +66,7 @@ class Order:
             raise ValueError("Cannot update Order with different id")
 
         if order["status"] == "closed" and self.filled_timestamp is None:
-            filled_ts = int(order["lastTradeTimestamp"])
+            filled_ts = int(order["lastTradeTimestamp"]) if order["lastTradeTimestamp"] is not None else None
         else:
             filled_ts = None
 

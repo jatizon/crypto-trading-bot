@@ -8,14 +8,27 @@ class OrderTracker:
         self.exchange = exchange
         self.orders = {}
 
-    def place_order(self, symbol, order_type, side, amount, price=None):
+    def _place_order(self, symbol, order_type, side, amount, price=None):
         order = self.exchange.create_order(symbol, order_type, side, amount, price)
         return order
 
-    def track_order(self, order):
+    def _track_order(self, order):
         order_id = order["id"]
         self.orders[order_id] = Order.from_ccxt_order(order)
-        return order_id
+
+        # Identifying events at order creation
+        if order["status"] == "closed":
+            return order_id, "order_filled"
+        if order["status"] == "canceled":
+            return order_id, "order_canceled"
+        if order["status"] == "expired":
+            return order_id, "order_expired"
+
+        return order_id, None
+        
+    def place_and_track_order(self, symbol, order_type, side, amount, price=None):
+        order = self._place_order(symbol, order_type, side, amount, price)
+        return self._track_order(order)
 
     def update_order(self, order_id):
         old_order = self.get_order(order_id)

@@ -6,27 +6,35 @@ from listeners import on_buy_order_closed
 
 class TradingBot:
     def __init__(self, context: BotContext):
-        self.context = context
+        self.ctx = context
+        self.dispatcher = context.dispatcher
         
     def run(self):
         print("Starting Bot...")
         
-        symbol = self.context.bot_config["symbol"]
-        amount = self.context.bot_config["amount"]
+        symbol = self.ctx.bot_config["symbol"]
+        amount = self.ctx.bot_config["amount"]
         
-        buy_order_id = self.context.order_tracker.create_order(symbol, "market", "buy", amount)
+        buy_order_id, immediate_event = self.ctx.order_tracker.place_and_track_order(
+            symbol, 
+            "market", 
+            "buy", 
+            amount
+        )
 
-        listener = self.context.dispatcher.create_listener_for_id(buy_order_id, on_buy_order_closed)
-        self.context.dispatcher.add_event_listener("order_closed", listener, keep_listener=False)
+        listener = self.dispatcher.create_listener_for_id(buy_order_id, on_buy_order_closed)
+        self.dispatcher.add_event_listener("order_closed", listener, keep_listener=False)
+
+        if immediate_event:
+            self.dispatcher.emit(immediate_event, id=buy_order_id, context=self.ctx)
 
         while True:
-            events = self.context.order_tracker.update_orders()
+            events = self.ctx.order_tracker.update_orders()
             
             if events:
                 for event_name, order_ids in events.items():
-                    print(f"Emitting event: {event_name}")
                     for order_id in order_ids:
-                        self.context.dispatcher.emit(event_name, id=order_id, context=self.context)
+                        self.dispatcher.emit(event_name, id=order_id, context=self.ctx)
 
             time.sleep(1)
     
