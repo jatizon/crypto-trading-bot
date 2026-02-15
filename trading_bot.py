@@ -1,6 +1,6 @@
 import time
 from context import BotContext
-from listeners import on_buy_order_closed
+from listeners import on_buy_order_closed, on_update_balances
 
 class TradingBot:
     def __init__(self, context: BotContext):
@@ -18,11 +18,27 @@ class TradingBot:
             self.amount
         )
 
-        listener = self.dispatcher.create_listener_for_id(buy_order_id, on_buy_order_closed)
-        self.dispatcher.add_event_listener("buy_order_closed", listener, keep_listener=False)
+        self.dispatcher.add_event_listener(
+            "update_balances", 
+            on_update_balances, 
+            keep_listener=True, 
+            static_payload={"context": self.ctx}
+        )
+
+        self.dispatcher.add_event_listener(
+            "buy_order_closed", 
+            on_buy_order_closed,
+            keep_listener=False, 
+            expected_id=buy_order_id, 
+            static_payload={"context": self.ctx},
+        )
 
         if immediate_event:
-            self.dispatcher.emit(immediate_event, id=buy_order_id, context=self.ctx)
+            self.dispatcher.emit(
+                immediate_event, 
+                order_id=buy_order_id, 
+                event_payload={"context": self.ctx}
+            )
 
         while True:
             events = self.ctx.order_tracker.update_orders()
@@ -30,7 +46,11 @@ class TradingBot:
             if events:
                 for event_name, order_ids in events.items():
                     for order_id in order_ids:
-                        self.dispatcher.emit(event_name, id=order_id, context=self.ctx)
+                        self.dispatcher.emit(
+                            event_name, 
+                            order_id=order_id, 
+                            event_payload={"context": self.ctx}
+                        )
 
             time.sleep(1)
     

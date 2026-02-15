@@ -20,8 +20,8 @@ bot_config = {
 }
 
 exchange = ccxt.coinbase({
-    "apiKey": os.getenv("COINBASE_API_KEY"),
-    "secret": os.getenv("COINBASE_API_SECRET"),
+    "apiKey": os.getenv("BINANCE_API_KEY"),
+    "secret": os.getenv("BINANCE_API_SECRET"),
     "enableRateLimit": True,
 })
 

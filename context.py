@@ -4,3 +4,7 @@ class BotContext:
         self.dispatcher = dispatcher
         self.order_tracker = order_tracker
         self.bot_config = bot_config
+        self.balances = {
+            "BRL": 0,
+            "BTC": 0,
+        }

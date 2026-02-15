@@ -15,3 +15,11 @@ def get_spread(exchange, symbol):
 def get_price(exchange, symbol):
     ticker = exchange.fetch_ticker(symbol)
     return ticker["last"]
+
+def get_total_balance(exchange, currency):
+        balance = exchange.fetch_balance()
+        return balance[currency].get("total")
+
+def get_free_balance(exchange, currency):
+        balance = exchange.fetch_balance()
+        return balance[currency].get("free")

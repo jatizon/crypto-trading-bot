@@ -14,10 +14,11 @@ class OrderTracker:
 
     def _track_order(self, order):
         order_id = order["id"]
-        self.orders[order_id] = Order.from_ccxt_order(order)
+        domain_order = Order.from_ccxt_order(order)
+        self.orders[order_id] = domain_order
 
         # Identifying events at order creation
-        event = self.create_event_for_order(order, immediate_event=True)
+        event = self.create_event_for_order(domain_order, immediate_event=True)
 
         return order_id, event
         

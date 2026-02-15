@@ -8,11 +8,11 @@ import pandas as pd
 
 
 
-def get_historical_data(exchange, symbol, timeframe, limit=1000, use_existing=False):
-    if use_existing:
+def get_historical_data(exchange, symbol, timeframe, since, limit=1000, use_existing=False):
+    if use_existing and os.path.exists("data.csv"):
         return pd.read_csv("data.csv")
 
-    since = int(time.mktime(time.strptime('2020-01-01', '%Y-%m-%d')) * 1000)
+    since = int(time.mktime(time.strptime(since, '%Y-%m-%d')) * 1000)
     all_ohlcv = []
 
     # Primeiro chunk
