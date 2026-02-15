@@ -24,3 +24,5 @@ def on_buy_order_closed(id=None, context=None, **kwargs):
         filled_amount,
         sell_price
     )
+
+def on_sell_order_closed(id=None, context=None, **kwargs):

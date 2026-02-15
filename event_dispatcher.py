@@ -10,13 +10,12 @@ class EventDispatcher:
         accepts_id = 'id' in inspect.signature(raw_listener).parameters
 
         def listener(id, **payload):
-            if id != expected_id:
-                return False
+            run = (id == expected_id)
+            if not run:
+                return run, None
             if accepts_id:
-                raw_listener(id=id, **kwargs, **payload)
-            else:
-                raw_listener(**kwargs, **payload)
-            return True
+                return run, raw_listener(id=id, **kwargs, **payload)
+            return run, raw_listener(**kwargs, **payload)
         return listener
 
     def add_event_listener(self, event, listener, keep_listener, **kwargs):
@@ -32,7 +31,7 @@ class EventDispatcher:
 
         for elements in listeners.copy():
             listener, keep_listener, listener_kwargs = elements
-            ran = listener(**listener_kwargs, **payload)
+            ran, _ = listener(**listener_kwargs, **payload)
             if not keep_listener and ran:
                 listeners.remove(elements)
 

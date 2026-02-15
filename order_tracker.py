@@ -17,14 +17,9 @@ class OrderTracker:
         self.orders[order_id] = Order.from_ccxt_order(order)
 
         # Identifying events at order creation
-        if order["status"] == "closed":
-            return order_id, "order_filled"
-        if order["status"] == "canceled":
-            return order_id, "order_canceled"
-        if order["status"] == "expired":
-            return order_id, "order_expired"
+        event = self.create_event_for_order(order, immediate_event=True)
 
-        return order_id, None
+        return order_id, event
         
     def place_and_track_order(self, symbol, order_type, side, amount, price=None):
         order = self._place_order(symbol, order_type, side, amount, price)
@@ -47,14 +42,14 @@ class OrderTracker:
     def remove_order(self, order_id):
         del self.orders[order_id]
 
-    def create_event_for_order(self, old_order, order):
-        if order.status != old_order.status:
+    def create_event_for_order(self, order, old_order=None, immediate_event=False):
+        if immediate_event or order.status != old_order.status:
             if order.status == "closed":
-                return "order_filled"
+                return f"{order.side}_order_closed"
             if order.status == "canceled":
-                return "order_canceled"
+                return f"{order.side}_order_canceled"
             if order.status == "expired":
-                return "order_expired"
+                return f"{order.side}_order_expired"
         return None
 
     def update_orders(self):
@@ -63,7 +58,7 @@ class OrderTracker:
             old_order = self.get_order(order_id) 
             order = self.update_order(order_id)
 
-            event = self.create_event_for_order(old_order, order)
+            event = self.create_event_for_order(order, old_order)
             if not event:
                 continue
             if event not in event_order_ids:
