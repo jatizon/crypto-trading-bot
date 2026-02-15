@@ -17,9 +17,9 @@ def get_price(exchange, symbol):
     return ticker["last"]
 
 def get_total_balance(exchange, currency):
-        balance = exchange.fetch_balance()
-        return balance[currency].get("total")
+    balance = exchange.fetch_balance()
+    return balance[currency].get("total")
 
 def get_free_balance(exchange, currency):
-        balance = exchange.fetch_balance()
-        return balance[currency].get("free")
+    balance = exchange.fetch_balance()
+    return balance[currency].get("free")

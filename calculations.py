@@ -1,5 +1,10 @@
-from market_data import get_spread
+from market_data import get_spread, get_price
 
+def convert_quote_to_base(exchange, symbol, quote_amount):
+    price = get_price(exchange, symbol)
+    amount_btc_raw = quote_amount / price
+    # amount_btc = float(exchange.amount_to_precision(symbol, amount_btc_raw))
+    return amount_btc_raw
 
 def get_fee_pct(exchange, symbol, order_type):
     markets = exchange.load_markets()

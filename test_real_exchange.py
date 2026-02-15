@@ -45,11 +45,12 @@ def make_logging_listener(name):
         if delta_balances:
             print(f"       delta_balances: {delta_balances}")
         if context:
-            print(f"       context.balances (before): BRL={context.balances.get('BRL', 0)}, BTC={context.balances.get('BTC', 0)}")
+            bal = context.wallet["runtime_balances"]
+            print(f"       context.wallet['runtime_balances'] (before): BRL={bal.get('BRL', 0)}, BTC={bal.get('BTC', 0)}")
             if delta_balances:
-                after_brl = context.balances.get("BRL", 0) + delta_balances.get("BRL", 0)
-                after_btc = context.balances.get("BTC", 0) + delta_balances.get("BTC", 0)
-                print(f"       context.balances (after update): BRL={after_brl}, BTC={after_btc}")
+                after_brl = bal.get("BRL", 0) + delta_balances.get("BRL", 0)
+                after_btc = bal.get("BTC", 0) + delta_balances.get("BTC", 0)
+                print(f"       context.wallet['runtime_balances'] (after update): BRL={after_brl}, BTC={after_btc}")
         return True, None
     return listener
 
@@ -98,14 +99,15 @@ def main():
 
     dispatcher = EventDispatcher()
     order_tracker = OrderTracker(exchange)
-    context = BotContext(exchange, dispatcher, order_tracker, bot_config)
+    wallet = {"runtime_balances": {"BRL": 100, "BTC": 0}, "profit": 0}
+    context = BotContext(exchange, dispatcher, order_tracker, bot_config, wallet)
 
-    # Add sell_order_closed listener (not wired in trading_bot.py - needed for balance update on sell)
+    # Add sell_order_closed listener (not wired in trading_bot.py - needed for balance update on sell) (not wired in trading_bot.py - needed for balance update on sell)
     def sell_listener(order_id, context=None, **kwargs):
         if context:
             result = on_sell_order_closed(order_id=order_id, context=context)
             print(f"\n[TEST] SELL ORDER CLOSED: order_id={order_id}")
-            print(f"       Final context.balances: BRL={context.balances['BRL']}, BTC={context.balances['BTC']}")
+            print(f"       Final context.wallet['runtime_balances']: BRL={context.wallet['runtime_balances']['BRL']}, BTC={context.wallet['runtime_balances']['BTC']}")
             return True, result
         return False, None
 
@@ -134,11 +136,11 @@ def main():
         bot.run()
     except KeyboardInterrupt:
         print("\n\n=== FINAL VERIFICATION ===")
-        print(f"context.balances (tracked): BRL={context.balances['BRL']}, BTC={context.balances['BTC']}")
+        print(f"context.wallet['runtime_balances'] (tracked): BRL={context.wallet['runtime_balances']['BRL']}, BTC={context.wallet['runtime_balances']['BTC']}")
         final_brl = get_total_balance(exchange, QUOTE_CURRENCY)
         final_btc = get_total_balance(exchange, BASE_CURRENCY)
         print(f"Exchange balances: {QUOTE_CURRENCY}={final_brl}, {BASE_CURRENCY}={final_btc}")
-        print("\nVerify: context.balances should match exchange balances if all updates ran correctly.")
+        print("\nVerify: runtime_balances = 100 BRL + deltas from this run (not real account balance).")
 
 
 if __name__ == "__main__":

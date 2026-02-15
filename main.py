@@ -9,17 +9,20 @@ from event_dispatcher import EventDispatcher
 from order_tracker import OrderTracker
 from context import BotContext
 
+
 load_dotenv()
 
+
 bot_config = {
-    "symbol": "BTC/USDC",
+    "symbol": "BTC/BRL",
     "type": "market",
     "side": "buy",
-    "amount": 1,
+    "amount": 15,
     "price": None,
+    "profit_percentage": 0.005,
 }
 
-exchange = ccxt.coinbase({
+exchange = ccxt.binance({
     "apiKey": os.getenv("BINANCE_API_KEY"),
     "secret": os.getenv("BINANCE_API_SECRET"),
     "enableRateLimit": True,
@@ -29,7 +32,8 @@ exchange.options['createMarketBuyOrderRequiresPrice'] = False
 
 dispatcher = EventDispatcher()
 order_tracker = OrderTracker(exchange)
+wallet = {"runtime_balances": {"BRL": 100, "BTC": 0}, "profit": 0}
 
-context = BotContext(exchange, dispatcher, order_tracker, bot_config)
+context = BotContext(exchange, dispatcher, order_tracker, bot_config, wallet)
 bot = TradingBot(context)
 bot.run()

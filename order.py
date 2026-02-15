@@ -16,6 +16,7 @@ class Order:
     remaining: float
     cost: Optional[float]
     average_price: Optional[float]
+    target_price: Optional[float]
 
     creation_timestamp: int
     last_trade_timestamp: Optional[int]
@@ -48,6 +49,7 @@ class Order:
             amount=float(order["amount"]),
             creation_timestamp=int(order["timestamp"]),
             expiration_timestamp=expiration_timestamp,
+            target_price=float(order["price"]) if order["price"] is not None else None,
 
             # Dynamic attributes
             cctx_status=str(order["status"]),

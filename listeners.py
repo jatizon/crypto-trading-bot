@@ -1,12 +1,15 @@
 from calculations import get_fee_pct, sell_price_for_profit
 
 
-def on_buy_order_closed(order_id=None, context=None):    
+def on_buy_order_closed(order_id, context):    
     buy_order = context.order_tracker.get_order(order_id)
 
     filled_amount = buy_order.filled
     cost = buy_order.cost
     symbol = context.bot_config["symbol"]
+
+    context.wallet["runtime_balances"]["BRL"] += -cost
+    context.wallet["runtime_balances"]["BTC"] += filled_amount
 
     sell_fee = get_fee_pct(context.exchange, symbol, "limit")
 
@@ -22,34 +25,30 @@ def on_buy_order_closed(order_id=None, context=None):
         "limit",
         "sell",
         filled_amount,
-        sell_price
+        sell_price,
     )
 
-    delta_balances = {
-        "BRL": -cost,
-        "BTC": filled_amount,
-    }
-    context.dispatcher.emit(
-        "update_balances", 
-        event_payload={"delta_balances": delta_balances},
+    context.dispatcher.add_event_listener(
+        "sell_order_closed", 
+        on_sell_order_closed,
+        keep_listener=False, 
+        expected_id=sell_order_id, 
+        static_payload={"context": context, "buy_cost": cost},
     )
 
-def on_sell_order_closed(order_id=None, context=None):
+def on_sell_order_closed(order_id, context, buy_cost):
     sell_order = context.order_tracker.get_order(order_id)
 
     filled_amount = sell_order.filled
     cost = sell_order.cost
 
-    delta_balances = {
-        "BRL": cost,
-        "BTC": -filled_amount,
-    }
-    context.dispatcher.emit(
-        "update_balances", 
-        event_payload={"delta_balances": delta_balances},
-    )
+    profit = cost - buy_cost
+    profit_pct = profit / buy_cost
 
-def on_update_balances(context=None, delta_balances=None):
-    context.balances["BRL"] += delta_balances["BRL"]
-    context.balances["BTC"] += delta_balances["BTC"]
-    return True, None
+    context.wallet["runtime_balances"]["BRL"] += cost
+    context.wallet["runtime_balances"]["BTC"] += -filled_amount
+    context.wallet["total_profit"] += profit
+
+    print(f"Profit: {profit}, Profit Percentage: {profit_pct}")
+    print(f"Runtime Balances: {context.wallet['runtime_balances']}")
+    print(f"Total Profit: {context.wallet['total_profit']}")
