@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field, fields
 from typing import Any, Dict, List, Optional, Union, get_args, get_origin
 import copy
-from utils import now_seconds
+from helpers.utils import now_seconds
 
 
 @dataclass(slots=True)

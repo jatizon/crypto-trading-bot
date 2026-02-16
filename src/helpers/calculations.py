@@ -1,4 +1,4 @@
-from market_data import get_spread, get_price
+from helpers.market_data import get_spread, get_price
 
 def convert_quote_to_base(exchange, symbol, quote_amount):
     price = get_price(exchange, symbol)

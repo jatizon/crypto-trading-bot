@@ -1,4 +1,4 @@
-from calculations import get_fee_pct, sell_price_for_profit
+from helpers.calculations import get_fee_pct, sell_price_for_profit
 
 # Example of listeners to buy and sell at a profit percentage
 

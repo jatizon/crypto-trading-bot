@@ -15,26 +15,19 @@ def get_historical_data(exchange, symbol, timeframe, since, limit=1000, use_exis
     since = int(time.mktime(time.strptime(since, '%Y-%m-%d')) * 1000)
     all_ohlcv = []
 
-    # Primeiro chunk
     ohlcv = exchange.fetch_ohlcv(symbol, timeframe=timeframe, since=since, limit=limit)
     if not ohlcv:
-        return pd.DataFrame()  # Nenhum dado
+        return pd.DataFrame()
 
     all_ohlcv += ohlcv
     since = ohlcv[-1][0] + 1
 
-    # Calcula delta t do primeiro chunk
     delta_t = ohlcv[-1][0] - ohlcv[0][0]
-
-    # Estima número de chunks total
     timestamp_now = int(time.time() * 1000)
     total_chunks_estimate = max(1, (timestamp_now - ohlcv[0][0]) // delta_t)
 
-    # Inicializa barra de progresso
     pbar = tqdm(total=total_chunks_estimate, desc=f'Fetching {symbol} data', unit='chunk')
-    pbar.update(1)  # Já baixamos o primeiro chunk
-
-    # Baixa os chunks restantes
+    pbar.update(1)
     while True:
         ohlcv = exchange.fetch_ohlcv(symbol, timeframe=timeframe, since=since, limit=limit)
         if not ohlcv:

@@ -1,6 +1,6 @@
 from datetime import datetime
 import copy
-from order import Order
+from events.order import Order
 
 
 class OrderTracker:
