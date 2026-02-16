@@ -1,25 +1,43 @@
 # Crypto Trading Bot
 
-Python bot that places orders, tracks their status, and reacts to events (order closed, canceled, etc.). Uses an abstract base class so you plug in your own strategy while reusing the order and event logic.
+Event-oriented trading bot. The main loop does not make trading decisions. Decisions happen in event listeners that react when orders change status.
 
-## Architecture
+## Design Goals
 
-### `src/` layout
+The architecture separates orchestration, state, infrastructure, and reactive logic. That exists because a monolithic loop with trading logic spread throughout becomes hard to reason about and to change. Here, the loop only polls and emits; strategy lives in listeners.
 
-`src/` is the package root. The editable install adds it to `sys.path`, so you import by package name, not by `src`:
+## Execution Flow
 
-```python
-from events.order_tracker import OrderTracker  # OK
-from src.events.order_tracker import OrderTracker  # Don't
-```
+1. The bot starts and places an order via `OrderTracker`.
+2. `OrderTracker` polls the exchange and holds order state.
+3. When an order status changes (e.g. closed), `OrderTracker` yields event names (`buy_order_closed`, `sell_order_closed`, etc.).
+4. The main loop calls `EventDispatcher.emit()` with those events.
+5. Listeners registered for that event run and decide what to do next (e.g. place a sell order, update balances).
+6. New listeners can be wired for the new order; the loop continues polling.
 
-### What lives where
+The loop never knows *what* to do when an order closes. It only knows *that* something changed and forwards that to listeners.
 
-- **helpers** – Calculations, market data helpers, and historical data fetching. Shared logic used by strategies and listeners.
-- **events** – Event dispatcher, order tracker, and the `Order` domain model. Handles placing orders and notifying when their status changes.
-- **bot_files** – Context object, event listeners, and the base trading bot class. `trading_bot_example.py` is a concrete strategy that buys and sells at a target profit.
+## Layer Responsibilities
 
-### Project structure
+**TradingBot** – Orchestrates the lifecycle: place order, register listeners, loop and emit. Contains no strategy logic. Subclasses implement `run()` but the base pattern is: wire listeners, poll, emit. Strategy stays in listeners.
+
+**BotContext** – Holds shared state (exchange, dispatcher, order_tracker, config, wallet). Passed into listeners so they don’t need globals or scattered dependencies. Everything a listener needs comes from context.
+
+**EventDispatcher** – Decouples producers (the loop) from consumers (listeners). The loop emits events without knowing who reacts. Listeners register by event name. Producers and consumers stay independent.
+
+**OrderTracker** – Encapsulates polling and order state. Calls the exchange, stores `Order` objects, detects status changes. Translates those changes into event names. The loop and listeners never touch raw exchange responses.
+
+**Listeners** – Pure reactions. Functions like `on_buy_order_closed` and `on_sell_order_closed` contain the trading logic: compute sell price, place sell order, update balances. They receive `order_id` and `context`, and decide what to do. No orchestration, only reaction.
+
+## Why This Architecture
+
+**Events instead of direct calls** – `OrderTracker` has no idea what should happen when an order closes. That depends on the strategy. By emitting events, the tracker stays generic. Listeners, chosen by the strategy, handle the reaction. Change the strategy by changing listeners, not the tracker or the loop.
+
+**Listeners as separate functions** – Logic is isolated and easy to test. You can swap listeners without touching the main loop. Each listener does one thing: react to a specific event. The loop stays small and predictable.
+
+**Strategy ≠ infrastructure** – The loop, `OrderTracker`, `EventDispatcher`, and `BotContext` are reusable. They don’t depend on profit percentage, fee logic, or any particular strategy. All that lives in listeners. Add a new strategy by adding listeners; infrastructure stays the same.
+
+## Project Structure
 
 ```
 project/
@@ -60,11 +78,11 @@ Requires Python 3.10+.
 python bot_main.py
 ```
 
-`bot_main.py` uses `TradingBotExample`. To run a custom strategy, import it from `bot_files` and instantiate it yourself.
+`bot_main.py` runs `TradingBotExample`. To use a different strategy, implement a subclass of `TradingBot` and wire your own listeners.
 
 ## Imports
 
-Always use the installed package names. Never prefix with `src`:
+Use package names directly. Never use `src` in imports:
 
 ```python
 from helpers.calculations import convert_quote_to_base
@@ -72,4 +90,4 @@ from events.order_tracker import OrderTracker
 from bot_files.context import BotContext
 ```
 
-Because `pip install -e .` puts `src/` on `sys.path`, Python sees `helpers`, `events`, and `bot_files` as top-level packages.
+`pip install -e .` adds `src/` to `sys.path`, so `helpers`, `events`, and `bot_files` are top-level packages.
