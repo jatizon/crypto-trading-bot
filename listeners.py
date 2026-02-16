@@ -1,5 +1,6 @@
 from calculations import get_fee_pct, sell_price_for_profit
 
+# Example of listeners to buy and sell at a profit percentage
 
 def on_buy_order_closed(order_id, context):    
     buy_order = context.order_tracker.get_order(order_id)
